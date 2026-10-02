@@ -1,9 +1,35 @@
-<!doctype html><html lang="vi"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><meta name="description" content="Triển lãm tương tác Chương 4, 5, 6: Đảng, Nhà nước, đoàn kết, văn hóa, đạo đức, con người."><title>DẤU ẤN — Ba cánh tư tưởng</title><link rel="stylesheet" href="museum3d.css"><script type="importmap">{"imports":{"three":"https://cdn.jsdelivr.net/npm/three@0.170.0/build/three.module.js"}}</script></head><body>
-<div id="scene" aria-hidden="true"></div><div id="labels"></div>
-<header><a class="brand" href="museum-3d.html">DẤU ẤN<small>BA CÁNH TƯ TƯỞNG</small></a><div class="toolbar"><button id="catalogue">Danh mục</button><button id="notebook">Sổ Dấu Ấn <span id="progress">0/18</span></button><button id="sources">Nguồn</button></div></header>
-<main class="intro"><span class="eyebrow">TRIỂN LÃM SỐ / CHƯƠNG 4 · 5 · 6</span><h1>Hiểu tư tưởng.<br><em>Mang giá trị vào đời sống.</em></h1><p id="status" role="status">Đang mở không gian… Bạn vẫn có thể đọc Danh mục.</p></main>
-<aside aria-label="Cánh trưng bày"><span class="eyebrow" id="chapter-label">KHÔNG GIAN Ý NIỆM</span><h2 id="title">Ba cánh. Một hành trình.</h2><p id="description">Chọn chương để bước vào. Chạm ảnh trong phòng hoặc mở danh mục để đọc đủ 18 hồ sơ.</p><div id="art-list"></div><button id="special">Sơ đồ Đại đoàn kết ↗</button></aside>
-<div class="camera-controls"><button id="overview">⌂ Toàn cảnh</button><button id="previous" aria-label="Chương trước">←</button><button id="next" aria-label="Chương tiếp theo">→</button><button id="zoom-in" aria-label="Tiến gần">＋</button><button id="zoom-out" aria-label="Lùi xa">−</button></div>
-<nav aria-label="Ba chương"><button data-zone="0"><small>CHƯƠNG 4</small>Đảng & Nhà nước</button><button data-zone="1"><small>CHƯƠNG 5</small>Đại đoàn kết</button><button data-zone="2"><small>CHƯƠNG 6</small>Văn hóa & con người</button></nav>
-<footer>Kéo để nhìn quanh · Chạm khung để đọc <span>Không gian do nhóm thiết kế · không phải bản quét bảo tàng thật</span></footer>
-<dialog id="modal" aria-labelledby="dialog-title"><button id="close" aria-label="Đóng cửa sổ">✕</button><div id="detail"></div></dialog><noscript>Hãy bật JavaScript để đọc triển lãm tương tác.</noscript><script type="module" src="museum3d.js"></script></body></html>
+<!doctype html>
+<html lang="vi">
+<head>
+ <meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+ <meta name="theme-color" content="#163329"><meta name="description" content="DẤU ẤN: triển lãm Chương 4, 5, 6 Tư tưởng Hồ Chí Minh, 3D tương tác và hồ sơ ảnh tư liệu.">
+ <title>DẤU ẤN — Ba cánh tư tưởng</title><link rel="stylesheet" href="museum3d.css"><link rel="stylesheet" href="fonts.css">
+ <link rel="preload" href="assets/fonts/be-400-latin.woff2" as="font" type="font/woff2" crossorigin>
+ <script type="importmap">{"imports":{"three":"./vendor/three/three.module.min.js"}}</script>
+</head>
+<body>
+ <a href="#exhibit-panel" class="skip-link">Đến danh sách hồ sơ</a>
+ <header class="site-header">
+  <a class="brand" href="museum-3d.html" translate="no">DẤU ẤN<small>BẢO TÀNG TƯ TƯỞNG</small></a>
+  <span class="header-tag">Một hành trình · Ba chương</span>
+  <div class="toolbar"><button id="catalogue">Danh mục</button><button id="notebook" aria-label="Sổ cá nhân"><span class="full-label">Sổ cá nhân</span><span class="short-label" aria-hidden="true">Sổ</span> <span id="progress">0/18</span></button><button id="sources">Nguồn</button><button id="help" aria-label="Hướng dẫn tham quan">?</button></div>
+ </header>
+ <main class="workspace">
+  <section class="gallery" aria-label="Không gian triển lãm">
+   <div class="stage-heading"><div><span class="eyebrow" id="chapter-label">TRIỂN LÃM TƯƠNG TÁC / 4 · 5 · 6</span><h1 id="stage-title">Ba cánh. Một hành trình.</h1></div><button id="quality" aria-pressed="false">Chế độ nhẹ</button></div>
+   <div id="viewport"><div id="scene"></div><div id="labels"></div><div class="scene-tag">KHÔNG GIAN Ý NIỆM <span>do nhóm thiết kế</span></div><div class="fallback-card" hidden><h2>Khám phá qua hồ sơ</h2><p>Không gian 3D chưa khả dụng. Bạn vẫn đọc được toàn bộ nội dung, xem ảnh và ghi chú.</p><button id="fallback-read">Mở danh mục</button><p><a href="museum-3d.html">Thử tham quan 3D →</a></p></div></div>
+   <div class="scene-tools"><div class="camera-controls"><button id="overview" title="Đặt lại góc nhìn">Toàn cảnh</button><button id="turn-left" aria-label="Xoay trái">↶</button><button id="turn-right" aria-label="Xoay phải">↷</button><button id="zoom-in" aria-label="Tiến gần">＋</button><button id="zoom-out" aria-label="Lùi xa">−</button></div><p id="status" role="status">Đang mở phòng… Nội dung vẫn có trong Danh mục.</p></div>
+  </section>
+  <aside id="exhibit-panel" tabindex="-1" aria-label="Hồ sơ trưng bày">
+   <div class="panel-head"><span class="eyebrow">TƯ TƯỞNG & ĐỜI SỐNG</span><h2 id="title">Hiểu để tiếp nối.</h2><p id="description">Chọn một chương để tham quan, hoặc bắt đầu với danh mục ảnh bên dưới.</p></div>
+   <button id="special" class="primary">Khám phá Đại đoàn kết →</button>
+   <details id="chapter-details" open><summary id="list-summary">Hồ sơ nổi bật <span>⌄</span></summary><div id="art-list"></div></details>
+   <p class="panel-foot">Diễn giải theo giáo trình · ảnh có chú thích nguồn</p>
+  </aside>
+ </main>
+ <nav class="chapter-nav" aria-label="Chọn chương"><button data-zone="0"><span class="chapter-num">04</span><span><small>ĐẢNG & NHÀ NƯỚC</small><strong>Quyền lực để phụng sự</strong></span></button><button data-zone="1"><span class="chapter-num">05</span><span><small>ĐẠI ĐOÀN KẾT</small><strong>Khác biệt cùng một hướng</strong></span></button><button data-zone="2"><span class="chapter-num">06</span><span><small>VĂN HÓA & CON NGƯỜI</small><strong>Giá trị trong đời sống</strong></span></button></nav>
+ <footer>18 hồ sơ · 10 ảnh tư liệu <span>Không phải bản quét bảo tàng thật · không tài khoản, không máy chủ</span></footer>
+ <dialog id="modal" aria-labelledby="dialog-title"><div class="dialog-bar"><span>DẤU ẤN / HỒ SƠ TƯ TƯỞNG</span><button id="close" aria-label="Đóng cửa sổ">✕</button></div><div id="detail"></div></dialog>
+ <noscript>Hãy bật JavaScript để xem ảnh, hồ sơ và không gian tương tác.</noscript>
+ <script type="module" src="museum3d.js"></script>
+</body></html>

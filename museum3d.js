@@ -1,77 +1,210 @@
-import {chapters,exhibits,media,flow,flowNotes} from './museum-content.js';
-const $=id=>document.getElementById(id);
-const el=(tag,text,cls)=>{const n=document.createElement(tag);if(text!==undefined)n.textContent=text;if(cls)n.className=cls;return n};
-const button=(text,fn,cls)=>{const b=el('button',text,cls);b.type='button';b.onclick=fn;return b};
-const link=(text,url)=>{const a=el('a',text);a.href=url;a.target='_blank';a.rel='noopener noreferrer';return a};
-let saved={visited:[],notes:{}};try{const s=JSON.parse(localStorage.getItem('dau-an-v2'));if(s&&Array.isArray(s.visited)&&s.notes&&typeof s.notes==='object')saved=s}catch{}
-let storageWorks=true,zone=-1,world=null;
-function persist(){try{localStorage.setItem('dau-an-v2',JSON.stringify(saved));return true}catch{storageWorks=false;return false}}
-function progress(){$('progress').textContent=`${exhibits.filter(e=>saved.visited.includes(e.id)).length}/18`}
-function modal(title){$('detail').replaceChildren();$('detail').append(el('h2',title));$('detail').firstChild.id='dialog-title';if(!$('modal').open)$('modal').showModal();$('modal').scrollTop=0}
-$('close').onclick=()=>$('modal').close();$('modal').addEventListener('close',()=>$('detail').replaceChildren());
-function openExhibit(e){
- if(!saved.visited.includes(e.id)){saved.visited.push(e.id);persist();progress()}
- modal(e.title);$('detail').prepend(el('small',`CHƯƠNG ${e.chapter} / MỤC ${e.section}`));
- const reading=el('div',undefined,'reading'),figure=el('figure'),img=el('img');img.src=e.image;img.alt=media[e.image].caption;
- figure.append(img,el('figcaption',`${media[e.image].caption} ${media[e.image].credit}.`),link('Nguồn ảnh ↗',media[e.image].url));
- const copy=el('div');copy.append(el('p',e.lead),el('p',e.body),el('small',`Nguồn kiến thức: giáo trình người dùng cung cấp, tr. ${e.pages}. Nội dung được diễn giải ngắn, không phải trích nguyên văn.`),el('p',e.question,'reflection'));
- reading.append(figure,copy);$('detail').append(reading);
- const label=el('label','Ghi lại suy nghĩ của bạn (ví dụ vận dụng của người xem, không phải lời trích giáo trình)');label.htmlFor='note';const note=el('textarea');note.id='note';note.maxLength=3000;note.value=typeof saved.notes[e.id]==='string'?saved.notes[e.id]:'';
- const msg=el('p',storageWorks?'Lưu trên trình duyệt này, không gửi lên máy chủ.':'Trình duyệt không cho lưu lâu dài; hãy xuất sổ trước khi đóng.');
- $('detail').append(label,note,msg);const actions=el('div',undefined,'modal-actions');actions.append(button('Lưu ghi chú',()=>{saved.notes[e.id]=note.value;msg.textContent=persist()?'Đã lưu trên thiết bị này.':'Không lưu được lâu dài. Hãy xuất sổ để giữ ghi chú.'}),button('Hồ sơ tiếp theo →',()=>openExhibit(exhibits[(exhibits.indexOf(e)+1)%18])),button('Về danh mục',catalogue));$('detail').append(actions);
+import {chapters, exhibits, media, flow, flowNotes} from './museum-content.js';
+
+const $ = id => document.getElementById(id);
+const el = (tag, text, cls) => {
+  const n = document.createElement(tag);
+  if (text !== undefined) n.textContent = text;
+  if (cls) n.className = cls;
+  return n;
+};
+const button = (text, fn, cls) => {
+  const b = el('button', text, cls); b.type = 'button'; b.onclick = fn; return b;
+};
+const link = (text, url) => {
+  const a = el('a', text); a.href = url; a.target = '_blank'; a.rel = 'noopener noreferrer'; return a;
+};
+function photo(src, alt, width=960, height=720) {
+  const img = el('img'); img.src = src; img.alt = alt; img.width = width; img.height = height;
+  img.decoding = 'async'; return img;
 }
-function catalogue(){modal('Danh mục tư tưởng');$('detail').append(el('p','18 hồ sơ · ba chương · đọc độc lập hoặc khám phá trong không gian 3D.'));
- const label=el('label','Tìm theo tên hoặc nội dung');label.htmlFor='search';const search=el('input');search.id='search';search.type='search';search.placeholder='Ví dụ: pháp quyền, khoan dung, cần kiệm…';
- const tabs=el('div',undefined,'chapter-tabs'),grid=el('div',undefined,'catalogue-grid'),count=el('p');count.setAttribute('role','status');let filter=0;
- const normalize=s=>s.normalize('NFD').replace(/[\u0300-\u036f]/g,'').replace(/đ/g,'d').toLowerCase();
- const render=()=>{grid.replaceChildren();const q=normalize(search.value);let list=exhibits.filter(e=>(!filter||e.chapter===filter)&&normalize(e.title+' '+e.lead+' '+e.body).includes(q));count.textContent=`${list.length} hồ sơ`;list.forEach(e=>{let b=button('',()=>openExhibit(e),'card');b.append(el('span',`CHƯƠNG ${e.chapter} / ${e.section}${saved.visited.includes(e.id)?' · ĐÃ ĐỌC':''}`),el('strong',e.title),el('span',`Giáo trình tr. ${e.pages}`));grid.append(b)});if(!list.length)grid.append(el('p','Không tìm thấy. Thử từ khóa khác.'));tabs.querySelectorAll('button').forEach(b=>b.setAttribute('aria-pressed',Number(b.dataset.filter)===filter))};
- [0,4,5,6].forEach(id=>{const b=button(id?'Chương '+id:'Tất cả',()=>{filter=id;render()});b.dataset.filter=id;tabs.append(b)});search.oninput=render;$('detail').append(label,search,tabs,count,grid);render();
+
+let saved = {visited: [], notes: {}, light: false};
+try {
+  const s = JSON.parse(localStorage.getItem('dau-an-v2'));
+  if (s && Array.isArray(s.visited) && s.notes && typeof s.notes === 'object') {
+    saved.visited = s.visited.filter(id=>exhibits.some(e=>e.id===id));
+    for (const e of exhibits) if (typeof s.notes[e.id] === 'string') saved.notes[e.id] = s.notes[e.id].slice(0,3000);
+    saved.light = s.light === true;
+  }
+} catch {}
+let storageWorks = true, zone = -1, world = null, activeExhibit = null, activeModal = '', autosave = null;
+let lastFocus = null, catalogueState = {filter: 0, query: ''};
+const initial = new URL(location.href);
+function route(values) {
+  const url = new URL(location.href);
+  for (const [key, value] of Object.entries(values)) {
+    if (value === null || value === '' || value === undefined) url.searchParams.delete(key);
+    else url.searchParams.set(key, value);
+  }
+  history.replaceState(null, '', url);
 }
-function unity(){modal('Từ nhân dân đến sức mạnh chung');$('detail').append(el('p','Sơ đồ diễn giải của nhóm từ mục 5.1.1–5.1.5, tr. 99–106. Đây không phải mô hình sáu bước trích nguyên văn của Hồ Chí Minh.'));
- const bar=el('div',undefined,'flow'),copy=el('p',undefined,'flow-copy');flow.forEach((s,i)=>{let b=button('',()=>{bar.querySelectorAll('button').forEach((x,k)=>x.setAttribute('aria-pressed',i===k));copy.textContent=flowNotes[i];world?.stage(i)},'flow-step');b.append(el('small',`0${i+1}`),el('span',s));b.setAttribute('aria-pressed',i===0);bar.append(b)});copy.textContent=flowNotes[0];$('detail').append(bar,copy,el('blockquote','“Đoàn kết toàn dân, phụng sự Tổ quốc”','quote'),el('small','Giáo trình tr. 100; lời phát biểu ngày 03/03/1951. Giáo trình dẫn Hồ Chí Minh Toàn tập (2011), tập 6, tr. 183.'),button('Đọc về Mặt trận →',()=>openExhibit(exhibits.find(e=>e.id==='5-3'))));
+function persist() {
+  try { localStorage.setItem('dau-an-v2', JSON.stringify(saved)); return true; }
+  catch { storageWorks = false; return false; }
 }
-function notebook(){modal('Sổ Dấu Ấn / Mang theo một giá trị');const passport=el('div',undefined,'passport');chapters.forEach(c=>{let n=exhibits.filter(e=>e.chapter===c.id&&saved.visited.includes(e.id)).length;const s=el('div',undefined,'stamp');s.append(el('small','CHƯƠNG '+c.id),el('strong',c.short),el('p',`${n}/6 hồ sơ đã mở`));passport.append(s)});$('detail').append(passport,el('p','Đây là sổ tham quan cá nhân, không phải đánh giá mức độ hiểu bài. Ghi chú chỉ nằm trên trình duyệt này.'));
- const notes=exhibits.filter(e=>saved.notes[e.id]?.trim());if(!notes.length)$('detail').append(el('p','Mở một hồ sơ, viết suy nghĩ của bạn rồi lưu. Những giá trị bạn chọn sẽ xuất hiện ở đây.','reflection'));
- notes.forEach(e=>{const n=el('section',undefined,'reflection');n.append(el('h3',e.title),el('p',saved.notes[e.id]),button('Chỉnh ghi chú',()=>openExhibit(e)));$('detail').append(n)});
- $('detail').append(button('Xuất sổ (.txt)',()=>{const text=['DẤU ẤN — Sổ tham quan',...notes.map(e=>`\n${e.title}\nNguồn: giáo trình tr. ${e.pages}\nSuy nghĩ cá nhân: ${saved.notes[e.id]}`)].join('\n');const url=URL.createObjectURL(new Blob([text],{type:'text/plain;charset=utf-8'}));const a=el('a');a.href=url;a.download='So-Dau-An.txt';a.click();setTimeout(()=>URL.revokeObjectURL(url),1000)}));
+function progress() {
+  $('progress').textContent = `${saved.visited.length}/18`;
+  document.querySelectorAll('.exhibit-row').forEach(b=>b.setAttribute('aria-current',b.dataset.id===activeExhibit));
 }
-function sources(){modal('Nguồn và giới hạn triển lãm');$('detail').append(el('p','Nguồn kiến thức chính: file “1. Giao trinh Tu tuong Ho Chi Minh.pdf” do người dùng cung cấp. Nội dung là diễn giải chọn lọc các mục Chương 4, 5, 6, không thay thế việc đọc giáo trình. Tham chiếu theo số trang in. Phần vận dụng phản ánh bối cảnh bản giáo trình, không được trình bày như cập nhật pháp luật hiện hành.'),el('p','Không gian 3D và sơ đồ là sáng tạo của nhóm, không phải mô hình số hóa công trình thật. Câu hỏi và ghi chú cá nhân là phần vận dụng, không phải lời của Hồ Chí Minh.'));
- Object.values(media).forEach(m=>{const s=el('section');s.append(el('h3',m.credit),el('p',m.caption),el('small',m.license+' · '),link('Hồ sơ ảnh ↗',m.url));$('detail').append(s)});
- $('detail').append(el('h3','Video / tư liệu bổ sung'),el('p','Các liên kết sau mở tìm kiếm trên YouTube theo chủ đề; không phải video đã được thẩm định và không dùng làm nguồn kiến thức cho hồ sơ.'));
- chapters.forEach(c=>{const p=el('p');p.append(link(`YouTube: ${c.short} ↗`,`https://www.youtube.com/results?search_query=${encodeURIComponent('VTV tư tưởng Hồ Chí Minh '+c.short)}`));$('detail').append(p)});
- $('detail').append(el('h3','Tham khảo hình thức'),link('VR3D: bảo tàng ảo ↗','https://vr3d.vn/trienlam/bao-tang-ao-vr3d'),el('p',''),link('Bảo tàng Hồ Chí Minh: tham quan ↗','https://baotang.hochiminh.vn/'),el('p','DẤU ẤN tổ chức theo cánh tư tưởng và câu hỏi vận dụng, không sao chép panorama, mô hình hoặc giao diện của hai trang tham khảo.'));
+function flushNote() {
+  if (autosave) { clearTimeout(autosave); autosave = null; persist(); }
 }
-function select(z){zone=z;const c=chapters[z];$('chapter-label').textContent='CHƯƠNG '+c.id;$('title').textContent=c.title;$('description').textContent=c.intro;$('art-list').replaceChildren();exhibits.filter(e=>e.zone===z).forEach((e,i)=>$('art-list').append(button(`0${i+1} / ${e.title}`,()=>openExhibit(e))));$('special').textContent=z===1?'Sơ đồ Đại đoàn kết ↗':'Mở danh mục chương ↗';$('special').onclick=z===1?unity:catalogue;document.querySelector('.intro').classList.add('compact');document.querySelectorAll('[data-zone]').forEach(b=>b.setAttribute('aria-pressed',Number(b.dataset.zone)===z));world?.select(z)}
-$('catalogue').onclick=catalogue;$('sources').onclick=sources;$('notebook').onclick=notebook;$('special').onclick=unity;document.querySelectorAll('[data-zone]').forEach(b=>b.onclick=()=>select(Number(b.dataset.zone)));
-$('overview').onclick=()=>{zone=-1;world?.overview();document.querySelector('.intro').classList.remove('compact');$('chapter-label').textContent='KHÔNG GIAN Ý NIỆM';$('title').textContent='Ba cánh. Một hành trình.';$('description').textContent='Chọn chương, chạm khung ảnh hoặc đọc đủ 18 hồ sơ qua Danh mục.';$('art-list').replaceChildren();$('special').textContent='Sơ đồ Đại đoàn kết ↗';$('special').onclick=unity;document.querySelectorAll('[data-zone]').forEach(b=>b.setAttribute('aria-pressed','false'))};
-$('next').onclick=()=>select((zone+1)%3);$('previous').onclick=()=>select((zone+2+3)%3);$('zoom-in').onclick=()=>world?.zoom(.85);$('zoom-out').onclick=()=>world?.zoom(1.15);progress();
-// Content works independently of the optional WebGL renderer and CDN availability.
-try{const THREE=await import('three');world=buildScene(THREE);if(zone>=0)world.select(zone);$('status').textContent='Không gian sẵn sàng · chọn một cánh để bắt đầu.'}catch(e){document.body.classList.add('fallback');$('status').textContent='3D không khả dụng. Danh mục, ghi chú và sơ đồ vẫn hoạt động.';document.querySelectorAll('#zoom-in,#zoom-out').forEach(b=>b.disabled=true);console.warn('3D fallback:',e.message)}
-function buildScene(T){
- const renderer=new T.WebGLRenderer({antialias:true,powerPreference:'low-power'});renderer.setPixelRatio(Math.min(devicePixelRatio,1.5));renderer.setSize(innerWidth,innerHeight);renderer.toneMapping=T.ACESFilmicToneMapping;renderer.toneMappingExposure=1.2;renderer.shadowMap.enabled=true;$('scene').append(renderer.domElement);
- const scene=new T.Scene();scene.background=new T.Color('#17271f');const camera=new T.PerspectiveCamera(55,innerWidth/innerHeight,.1,60);const target=new T.Vector3(8,6.8,12),look=new T.Vector3(0,1.6,-2),aim=look.clone();camera.position.copy(target);scene.add(new T.HemisphereLight('#fff1d6','#3a493d',2.5));const sun=new T.DirectionalLight('#fff0d0',3);sun.position.set(2,8,8);sun.castShadow=true;scene.add(sun);
- const mat=c=>new T.MeshStandardMaterial({color:c,roughness:.65});const stone=mat('#e1d8c3'),gold=mat('#bfa16c'),palettes=['#537383','#a58348','#718266'];
- const box=(w,h,d,x,y,z,m,parent=scene)=>{const o=new T.Mesh(new T.BoxGeometry(w,h,d),m);o.position.set(x,y,z);o.castShadow=true;o.receiveShadow=true;parent.add(o);return o};
- box(14,.2,16,0,-.1,0,mat('#b9ae95'));box(14,5.6,.3,0,2.8,-6,stone);box(.3,5.6,12,-7,2.8,0,stone);box(.3,5.6,12,7,2.8,0,stone);
- for(let x=-6;x<=6;x+=2)box(.015,.01,16,x,.01,0,mat('#8d866e'));for(let z=-6;z<=8;z+=2)box(14,.01,.015,0,.02,z,mat('#8d866e'));
- for(const x of [-6.6,6.6])for(const z of [-5,1,5])box(.3,5.4,.3,x,2.7,z,mat('#3b5548'));
- function texture(title,sub,color='#29483b'){const c=document.createElement('canvas');c.width=1024;c.height=256;const g=c.getContext('2d');g.fillStyle=color;g.fillRect(0,0,1024,256);g.textAlign='center';g.fillStyle='#fff2d9';g.font='42px Georgia';g.fillText(title,512,117);g.font='20px sans-serif';g.fillText(sub,512,170);const t=new T.CanvasTexture(c);t.colorSpace=T.SRGBColorSpace;return t}
- const plane=(w,h,t,parent=scene)=>{const p=new T.Mesh(new T.PlaneGeometry(w,h),new T.MeshBasicMaterial({map:t}));parent.add(p);return p};
- const heading=plane(4.5,1.1,texture('DẤU ẤN','BA CÁNH TƯ TƯỞNG'));heading.position.set(0,4.6,-5.8);
- const objects=[],hotspots=[],loader=new T.TextureLoader();
- chapters.forEach((c,z)=>{for(let i=0;i<3;i++){const e=exhibits.find(e=>e.zone===z&&e.index===i*2);const group=new T.Group();group.position.set(z===1?(i-1)*3.7:z===0?-6.8:6.8,2.6,z===1?-5.78:-4.3+i*3.3);group.rotation.y=z===1?0:z===0?Math.PI/2:-Math.PI/2;scene.add(group);box(2.65,2.15,.12,0,0,0,gold,group);const backing=box(2.47,1.97,.015,0,0,.07,mat(palettes[z]),group);const pic=plane(2.3,1.75,texture(c.short,'ẢNH TƯ LIỆU',palettes[z]),group);pic.position.z=.085;
- loader.load(c.image,t=>{t.colorSpace=T.SRGBColorSpace;const ratio=t.image.width/t.image.height;pic.scale.set(Math.min(1,ratio/(2.3/1.75)),Math.min(1,(2.3/1.75)/ratio),1);pic.material.map=t;pic.material.needsUpdate=true;dirty=true},undefined,()=>{$('status').textContent='Một ảnh chưa tải được. Nội dung vẫn đọc được trong Danh mục.'});pic.userData={e};objects.push(pic,backing);backing.userData={e};const plaque=plane(2.6,.6,texture(e.title,`CHƯƠNG ${c.id} / MỤC ${e.section}`,palettes[z]),group);plaque.position.set(0,-1.5,.09);
- const b=button('+',()=>openExhibit(e),'hotspot');b.setAttribute('aria-label','Đọc '+e.title);$('labels').append(b);hotspots.push({b,group,z});
- } });
- // Abstract solidarity sculpture: separate figures sharing one ring, not a historical artefact.
- const sculpture=new T.Group();sculpture.position.set(0,0,-.3);scene.add(sculpture);box(2.1,.65,2.1,0,.325,0,stone,sculpture);const figures=[];
- for(let i=0;i<6;i++){const a=i/6*Math.PI*2;const g=new T.Group();g.position.set(Math.cos(a)*.7,.7,Math.sin(a)*.7);const body=new T.Mesh(new T.CylinderGeometry(.1,.16,.55,12),mat(palettes[i%3]));body.position.y=.28;g.add(body);const head=new T.Mesh(new T.SphereGeometry(.13,16,12),gold);head.position.y=.68;g.add(head);sculpture.add(g);figures.push(g)}
- const ring=new T.Mesh(new T.TorusGeometry(1.02,.035,12,64),gold);ring.rotation.x=Math.PI/2;ring.position.y=1.7;sculpture.add(ring);for(const x of [-3.2,3.2]){box(2,.14,.65,x,.65,3,mat('#79573d'));for(const dx of [-.8,.8])box(.1,.65,.5,x+dx,.32,3,mat('#3b5548'))}
- const positions=[[-1.8,2.5,0],[0,2.5,2.3],[1.8,2.5,0]],looks=[[-6.7,2.5,-1], [0,2.8,-5.8],[6.7,2.5,-1]];let dirty=true,down=null,moved=false,last=0,active=-1;const reduced=matchMedia('(prefers-reduced-motion: reduce)');
- function select(z){active=z;target.set(...positions[z]);aim.set(...looks[z]);dirty=true}function overview(){active=-1;target.set(8,6.8,12);aim.set(0,1.6,-2);dirty=true}
- function zoom(f){const offset=target.clone().sub(aim);offset.multiplyScalar(f);offset.clampLength(2.2,18);target.copy(aim).add(offset);dirty=true}
- const ray=new T.Raycaster();renderer.domElement.addEventListener('pointerdown',e=>{down={x:e.clientX,y:e.clientY};moved=false;renderer.domElement.setPointerCapture(e.pointerId)});renderer.domElement.addEventListener('pointermove',e=>{if(!down)return;const dx=e.clientX-down.x,dy=e.clientY-down.y;if(Math.abs(dx)+Math.abs(dy)>3)moved=true;const dir=aim.clone().sub(target).normalize(),right=new T.Vector3().crossVectors(dir,new T.Vector3(0,1,0)).normalize();aim.addScaledVector(right,-dx*.008);aim.y=T.MathUtils.clamp(aim.y+dy*.005,.5,4.5);down={x:e.clientX,y:e.clientY};dirty=true});renderer.domElement.addEventListener('pointerup',e=>{if(!moved){ray.setFromCamera(new T.Vector2(e.clientX/innerWidth*2-1,-e.clientY/innerHeight*2+1),camera);const h=ray.intersectObjects(objects)[0];if(h)openExhibit(h.object.userData.e)}down=null});renderer.domElement.addEventListener('pointercancel',()=>down=null);
- addEventListener('resize',()=>{camera.aspect=innerWidth/innerHeight;camera.updateProjectionMatrix();renderer.setSize(innerWidth,innerHeight);dirty=true});renderer.domElement.addEventListener('webglcontextlost',e=>{e.preventDefault();$('status').textContent='3D tạm dừng. Hãy đọc qua Danh mục hoặc tải lại trang.'});
- const cursor=new T.Vector3();function animate(now){requestAnimationFrame(animate);if(document.hidden)return;const dt=Math.min((now-last)/1000,.1);last=now;const moving=camera.position.distanceToSquared(target)>.0001||look.distanceToSquared(aim)>.0001;if(moving){const a=reduced.matches?1:1-Math.exp(-dt*5);camera.position.lerp(target,a);look.lerp(aim,a);dirty=true}if(!dirty)return;camera.lookAt(look);renderer.render(scene,camera);const panels=[...document.querySelectorAll('header,aside,nav,.camera-controls,.intro')].map(p=>p.getBoundingClientRect());hotspots.forEach(h=>{h.group.getWorldPosition(cursor);cursor.project(camera);const x=(cursor.x*.5+.5)*innerWidth,y=(-cursor.y*.5+.5)*innerHeight;const covered=panels.some(r=>x>r.left-18&&x<r.right+18&&y>r.top-18&&y<r.bottom+18);h.b.hidden=moving||covered||active!==h.z||cursor.z>1||cursor.z< -1||Math.abs(cursor.x)>.95||Math.abs(cursor.y)>.9;h.b.style.left=x+'px';h.b.style.top=y+'px'});dirty=moving}requestAnimationFrame(animate);
- return {select,overview,zoom,stage(i){figures.forEach((g,k)=>g.scale.setScalar(k<=i?1:.65));dirty=true}};
+function modal(title, kind, id) {
+  flushNote(); activeModal = kind;
+  if (!$('modal').open) lastFocus = document.activeElement;
+  $('detail').replaceChildren(el('h2',title)); $('detail').firstChild.id = 'dialog-title';
+  if (!$('modal').open) $('modal').showModal();
+  $('modal').scrollTop = 0;
+  route({view:kind, exhibit:id||null});
+  // A stable close target is present even when replacing the entire modal body.
+  $('close').focus({preventScroll:true});
+}
+$('close').onclick = () => $('modal').close();
+$('modal').addEventListener('click', e => { if (e.target === $('modal')) {
+  const r=$('modal').getBoundingClientRect();
+  if (e.clientX<r.left || e.clientX>r.right || e.clientY<r.top || e.clientY>r.bottom) $('modal').close();
+}});
+$('modal').addEventListener('close', () => {
+  flushNote(); activeModal = ''; route({view:null,exhibit:null}); $('detail').replaceChildren();
+  if (lastFocus?.isConnected && lastFocus.getClientRects().length) lastFocus.focus({preventScroll:true});
+  else $('catalogue').focus({preventScroll:true});
+});
+addEventListener('pagehide', flushNote);
+
+function openPhoto(e) {
+  modal('Tư liệu ảnh / '+e.title, 'photo', e.id);
+  $('detail').append(photo(e.image,media[e.image].caption,960,720));
+  $('detail').lastChild.className='full-photo';
+  $('detail').append(el('p',media[e.image].caption),el('small',`${media[e.image].credit} · ${media[e.image].license} · Hiển thị nguyên ảnh, không cắt nội dung.`),el('p'));
+  $('detail').lastChild.append(link('Hồ sơ ảnh gốc ↗',media[e.image].url));
+  $('detail').append(button('← Trở về hồ sơ',()=>openExhibit(e)));
+}
+function openExhibit(e) {
+  if (!e) return;
+  if (zone !== e.zone) select(e.zone);
+  activeExhibit=e.id;
+  if (!saved.visited.includes(e.id)) { saved.visited.push(e.id); persist(); }
+  progress(); modal(e.title,'exhibit',e.id);
+  $('detail').prepend(el('small',`CHƯƠNG ${e.chapter} / MỤC ${e.section} · HỒ SƠ ${e.index+1}/6`));
+  const reading=el('div',undefined,'reading'), figure=el('figure'), m=media[e.image];
+  const enlarge=button('',()=>openPhoto(e),'photo-button'); enlarge.setAttribute('aria-label','Phóng to ảnh '+e.title);
+  enlarge.append(photo(e.image,m.caption));
+  const caption=el('figcaption',`${m.caption} ${m.credit}. `); caption.append(link('Nguồn ảnh ↗',m.url),el('br'),el('span','Chạm ảnh để xem lớn. Ảnh minh họa, không thay thế nguồn kiến thức.'));
+  figure.append(enlarge,caption);
+  const copy=el('div'); copy.append(el('p',e.lead,'lead'),el('p',e.body),el('small',`Giáo trình tr. ${e.pages} · diễn giải ngắn, không phải trích nguyên văn.`),el('p',e.question,'reflection'));
+  reading.append(figure,copy); $('detail').append(reading);
+  const notes=el('section',undefined,'note-section');
+  const label=el('label','Suy nghĩ của bạn'); label.htmlFor='note';
+  const note=el('textarea'); note.id='note'; note.name='reflection'; note.autocomplete='off'; note.maxLength=3000; note.placeholder='Một điều bạn muốn mang vào đời sống…'; note.value=saved.notes[e.id]||'';
+  const msg=el('p','Tự lưu trên thiết bị này · không gửi lên máy chủ.','toast'); msg.setAttribute('role','status');
+  note.oninput=()=>{saved.notes[e.id]=note.value;clearTimeout(autosave);msg.textContent='Đang lưu…';autosave=setTimeout(()=>{autosave=null;msg.textContent=persist()?'Đã lưu trên thiết bị này.':'Không lưu được lâu dài. Hãy xuất sổ để giữ ghi chú.'},350)};
+  notes.append(label,note,msg,el('small','Câu hỏi và ghi chú là vận dụng cá nhân, không phải lời trích giáo trình.'));
+  const actions=el('div',undefined,'modal-actions');
+  actions.append(button('← Hồ sơ trước',()=>openExhibit(exhibits[(exhibits.indexOf(e)+17)%18])),button('Về danh mục',()=>catalogue(e.chapter)),button('Hồ sơ tiếp theo →',()=>openExhibit(exhibits[(exhibits.indexOf(e)+1)%18]),'primary'));
+  $('detail').append(notes,actions);
+}
+
+const normalize=s=>s.toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g,'').replace(/đ/g,'d');
+function catalogue(filter=catalogueState.filter) {
+  if (typeof filter==='number') catalogueState.filter=filter;
+  modal('Danh mục tư tưởng','catalogue');
+  $('detail').append(el('p','Chọn một hồ sơ để đọc, xem ảnh và ghi lại suy nghĩ. Bạn không cần điều khiển 3D để khám phá đủ ba chương.'));
+  const label=el('label','Tìm theo tên hoặc nội dung'); label.htmlFor='search';
+  const search=el('input'); search.id='search'; search.name='search'; search.type='search'; search.autocomplete='off'; search.placeholder='Ví dụ: pháp quyền, khoan dung, cần kiệm…'; search.value=catalogueState.query;
+  const tabs=el('div',undefined,'chapter-tabs'), grid=el('div',undefined,'catalogue-grid'), count=el('p',undefined,'toast');count.setAttribute('role','status');
+  function render() {
+    const q=normalize(search.value); catalogueState.query=search.value;
+    const list=exhibits.filter(e=>(!catalogueState.filter||e.chapter===catalogueState.filter)&&normalize(e.title+' '+e.lead+' '+e.body).includes(q));
+    grid.replaceChildren(); count.textContent=`${list.length} hồ sơ${catalogueState.filter?' · Chương '+catalogueState.filter:''}`;
+    list.forEach(e=>{
+      const b=button('',()=>openExhibit(e),'card'), img=photo(e.image,'',960,720);img.loading='lazy';
+      const copy=el('span',undefined,'card-copy'); copy.append(el('small',`CHƯƠNG ${e.chapter} / ${e.section}${saved.visited.includes(e.id)?' · ĐÃ MỞ':''}`),el('strong',e.title),el('span',`Giáo trình tr. ${e.pages}`)); b.append(img,copy);grid.append(b);
+    });
+    if (!list.length) grid.append(el('p','Không tìm thấy hồ sơ. Thử từ khóa khác hoặc chọn Tất cả.'));
+    tabs.querySelectorAll('button').forEach(b=>b.setAttribute('aria-pressed',Number(b.dataset.filter)===catalogueState.filter));
+    route({filter:catalogueState.filter||null,q:search.value||null});
+  }
+  [0,4,5,6].forEach(id=>{const b=button(id?'Chương '+id:'Tất cả',()=>{catalogueState.filter=id;render()}); b.dataset.filter=id; tabs.append(b)});
+  search.oninput=render; $('detail').append(label,search,tabs,count,grid); render();
+}
+function unity() {
+  modal('Từ nhân dân đến sức mạnh chung','unity');
+  $('detail').append(el('p','Sơ đồ diễn giải của nhóm từ mục 5.1.1–5.1.5, tr. 99–106; không phải mô hình sáu bước được trích nguyên văn.'));
+  const bar=el('div',undefined,'flow'), copy=el('p',flowNotes[0],'flow-copy');copy.setAttribute('role','status');
+  flow.forEach((s,i)=>{const b=button('',()=>{bar.querySelectorAll('button').forEach((x,k)=>x.setAttribute('aria-pressed',i===k));copy.textContent=flowNotes[i];world?.stage(i)},'flow-step');b.append(el('small',`0${i+1}`),el('span',s));b.setAttribute('aria-pressed',i===0);bar.append(b)});
+  $('detail').append(bar,copy,el('blockquote','“Đoàn kết toàn dân, phụng sự Tổ quốc”','quote'),el('small','Giáo trình tr. 100; lời phát biểu ngày 03/03/1951. Dẫn Hồ Chí Minh Toàn tập (2011), tập 6, tr. 183.'),el('div',undefined,'modal-actions'));
+  $('detail').lastChild.append(button('Đọc về Mặt trận →',()=>openExhibit(exhibits.find(e=>e.id==='5-3')),'primary'));
+}
+function notebook() {
+  modal('Sổ Dấu Ấn / Mang theo một giá trị','notebook');
+  const passport=el('div',undefined,'passport');
+  chapters.forEach(c=>{const n=exhibits.filter(e=>e.chapter===c.id&&saved.visited.includes(e.id)).length;const s=el('div',undefined,'stamp');s.append(el('small','CHƯƠNG '+c.id),el('strong',c.short),el('p',`${n}/6 hồ sơ đã mở`));passport.append(s)});
+  $('detail').append(passport,el('p','Sổ tham quan cá nhân, không phải bài kiểm tra. Ghi chú tự lưu trên thiết bị; bạn có thể xuất để giữ lại hoặc chia sẻ.'));
+  const notes=exhibits.filter(e=>saved.notes[e.id]?.trim());
+  if (!notes.length) $('detail').append(el('p','Chưa có ghi chú. Mở một hồ sơ và viết một việc bạn muốn thực hiện.','reflection'));
+  notes.forEach(e=>{const n=el('section',undefined,'reflection');n.append(el('h3',e.title),el('p',saved.notes[e.id],'user-note'),button('Chỉnh ghi chú',()=>openExhibit(e)));$('detail').append(n)});
+  $('detail').append(button('Xuất sổ (.txt)',()=>{
+    flushNote();const text=['DẤU ẤN — Sổ tham quan',...notes.map(e=>`\n${e.title}\nNguồn: giáo trình tr. ${e.pages}\nSuy nghĩ cá nhân: ${saved.notes[e.id]}`)].join('\n');
+    const url=URL.createObjectURL(new Blob(['\uFEFF',text],{type:'text/plain;charset=utf-8'}));const a=el('a');a.href=url;a.download='So-Dau-An.txt';a.click();setTimeout(()=>URL.revokeObjectURL(url),1000);
+  },'primary'));
+}
+function sources() {
+  modal('Nguồn và giới hạn triển lãm','sources');
+  $('detail').append(el('p','Nguồn kiến thức chính: PDF giáo trình Tư tưởng Hồ Chí Minh do người dùng cung cấp. Nội dung diễn giải chọn lọc Chương 4, 5, 6, không thay thế giáo trình. Số trang là số in trên trang. Phần vận dụng theo bối cảnh bản giáo trình, không phải cập nhật pháp luật hiện hành.'),el('p','Không gian 3D, sơ đồ và câu hỏi là thiết kế của nhóm. Ảnh lịch sử và ảnh di sản đương đại được phân biệt trong chú thích; không coi ảnh minh họa là bằng chứng cho từng luận điểm.'));
+  Object.entries(media).forEach(([src,m])=>{const s=el('section',undefined,'source-entry'),img=photo(src,'',960,720);img.loading='lazy';const copy=el('div');copy.append(el('h3',m.credit),el('p',m.caption),el('small',m.license+' · Hiển thị nguyên ảnh. '),link('Hồ sơ gốc ↗',m.url));if(m.licenseUrl)copy.append(el('span',' · '),link('Giấy phép ↗',m.licenseUrl));s.append(img,copy);$('detail').append(s)});
+  $('detail').append(el('h3','Mã nguồn mở'),el('p','Three.js r170 và OrbitControls, giấy phép MIT. Font Be Vietnam Pro và Noto Serif theo SIL Open Font License 1.1. Thư viện và font lưu cùng dự án, không phụ thuộc CDN để mở không gian. Không dùng mô hình hoặc panorama độc quyền của trang tham khảo.'));
+  const credits=el('p');credits.append(link('Three.js / mã nguồn ↗','https://github.com/mrdoob/three.js'),el('span',' · '),link('OrbitControls / hướng dẫn ↗','https://threejs.org/docs/pages/OrbitControls.html'));$('detail').append(credits);
+  $('detail').append(el('h3','Tư liệu bổ sung'),el('p','Liên kết tìm kiếm video theo chủ đề trên YouTube; không phải video đã thẩm định, không dùng làm nguồn kiến thức của hồ sơ.'));
+  chapters.forEach(c=>{const p=el('p');p.append(link(`YouTube: ${c.short} ↗`,`https://www.youtube.com/results?search_query=${encodeURIComponent('VTV tư tưởng Hồ Chí Minh '+c.short)}`));$('detail').append(p)});
+  const refs=el('p');refs.append(link('VR3D ↗','https://vr3d.vn/trienlam/bao-tang-ao-vr3d'),el('span',' · '),link('Bảo tàng Hồ Chí Minh ↗','https://baotang.hochiminh.vn/'));$('detail').append(el('h3','Tham khảo hình thức'),refs);
+}
+function help() {
+  modal('Tham quan theo cách của bạn','help');
+  const steps=[['1. Chọn một chương','Ba nút phía dưới đưa bạn đến ba cánh trưng bày.'],['2. Khám phá không gian','Kéo để xoay, cuộn hoặc dùng hai ngón để zoom. Nút xoay và zoom là lựa chọn thay thế. Toàn cảnh đưa bạn về sảnh.'],['3. Đọc hồ sơ','Chạm dấu + hoặc chọn ảnh trong danh sách. Danh mục chứa đủ 18 hồ sơ, kể cả khi không dùng 3D.'],['4. Mang theo một giá trị','Ghi chú được tự lưu. Mở Sổ cá nhân để đọc lại và xuất TXT.'],['Máy yếu hoặc chuyển động gây khó chịu?','Bật Chế độ nhẹ. Trang tự tôn trọng thiết lập giảm chuyển động của thiết bị. Không có chuyển động tự chạy.']];
+  steps.forEach(([h,p])=>$('detail').append(el('h3',h),el('p',p)));
+  const reading=el('a','Mở chế độ đọc, không tải 3D →');reading.href='museum-3d.html?mode=read';
+  const actions=el('div',undefined,'modal-actions');actions.append(reading,button('Nguồn tư liệu',sources));$('detail').append(actions);
+}
+function fillList(z) {
+  $('art-list').replaceChildren();const list=z>=0?exhibits.filter(e=>e.zone===z):[exhibits[0],exhibits[6],exhibits[12]];
+  list.forEach(e=>{const b=button('',()=>openExhibit(e),'exhibit-row');b.dataset.id=e.id;const img=photo(e.image,'',62,54);img.loading='lazy';const text=el('span');text.append(el('strong',e.title),el('small',`Chương ${e.chapter} · mục ${e.section}`));b.append(img,text);$('art-list').append(b)});progress();
+  $('list-summary').replaceChildren(el('span',z>=0?'6 hồ sơ · chạm để mở':'Bắt đầu với 3 hồ sơ'),el('span','⌄'));
+}
+function select(z, updateURL=true) {
+  zone=z;const c=chapters[z];$('stage-title').textContent=c.title;$('chapter-label').textContent=`CHƯƠNG ${c.id} / ${c.short.toUpperCase()}`;$('title').textContent=c.short;$('description').textContent=c.intro;fillList(z);
+  $('special').textContent=z===1?'Sơ đồ Đại đoàn kết →':'Danh mục Chương '+c.id+' →';$('special').onclick=z===1?unity:()=>catalogue(c.id);
+  document.querySelectorAll('[data-zone]').forEach(b=>b.setAttribute('aria-pressed',Number(b.dataset.zone)===z));world?.select(z);
+  if(updateURL)route({chapter:c.id});
+}
+function overview() {
+  zone=-1;$('stage-title').textContent='Ba cánh. Một hành trình.';$('chapter-label').textContent='TRIỂN LÃM TƯƠNG TÁC / 4 · 5 · 6';$('title').textContent='Hiểu để tiếp nối.';$('description').textContent='Chọn một chương để tham quan, hoặc bắt đầu với danh mục ảnh bên dưới.';fillList(-1);$('special').textContent='Khám phá Đại đoàn kết →';$('special').onclick=unity;document.querySelectorAll('[data-zone]').forEach(b=>b.setAttribute('aria-pressed','false'));world?.overview();route({chapter:null});
+}
+$('catalogue').onclick=()=>catalogue(0);$('fallback-read').onclick=()=>catalogue(0);$('notebook').onclick=notebook;$('sources').onclick=sources;$('help').onclick=help;$('special').onclick=unity;$('overview').onclick=overview;
+document.querySelectorAll('[data-zone]').forEach(b=>b.onclick=()=>select(Number(b.dataset.zone)));
+$('zoom-in').onclick=()=>world?.zoom(.85);$('zoom-out').onclick=()=>world?.zoom(1.15);$('turn-left').onclick=()=>world?.turn(-.15);$('turn-right').onclick=()=>world?.turn(.15);
+$('quality').setAttribute('aria-pressed',saved.light);$('quality').onclick=()=>{saved.light=!saved.light;persist();$('quality').setAttribute('aria-pressed',saved.light);world?.quality(saved.light);$('status').textContent=saved.light?'Chế độ nhẹ: giảm độ phân giải và bỏ bóng đổ.':'Kéo để xoay · cuộn / hai ngón để zoom.'};
+const mobile=matchMedia('(max-width:760px)');$('chapter-details').open=!mobile.matches;mobile.addEventListener('change',e=>$('chapter-details').open=!e.matches);
+fillList(-1);progress();
+const z=chapters.findIndex(c=>c.id===Number(initial.searchParams.get('chapter')));if(z>=0)select(z,false);
+catalogueState={filter:[4,5,6].includes(Number(initial.searchParams.get('filter')))?Number(initial.searchParams.get('filter')):0,query:initial.searchParams.get('q')||''};
+const requested=initial.searchParams.get('view'), requestedExhibit=exhibits.find(e=>e.id===initial.searchParams.get('exhibit'));
+if(requested==='exhibit'&&requestedExhibit)openExhibit(requestedExhibit);
+else if(requested==='photo'&&requestedExhibit)openPhoto(requestedExhibit);
+else if(requested==='catalogue')catalogue(catalogueState.filter);
+else if(requested==='unity')unity();else if(requested==='notebook')notebook();else if(requested==='sources')sources();else if(requested==='help')help();
+// Lazy, locally hosted renderer: knowledge and notes remain usable without WebGL.
+if(initial.searchParams.get('mode')==='read')fallback('Chế độ đọc được chọn qua URL');
+else try {
+  const {createMuseum}=await import('./museum-scene.js');
+  await document.fonts.ready;
+  world=createMuseum({host:$('scene'),labels:$('labels'),exhibits,open:openExhibit,light:saved.light,status:message=>$('status').textContent=message});
+  if(zone>=0)world.select(zone);
+} catch(e) { fallback(e.message); }
+function fallback(reason) {
+  document.body.classList.add('fallback');document.querySelector('.fallback-card').hidden=false;
+  const reading=initial.searchParams.get('mode')==='read';
+  $('status').textContent=reading?'Chế độ đọc · không tải thư viện 3D.':'3D không khả dụng · mở Danh mục để đọc toàn bộ nội dung.';
+  if(reading)document.querySelector('.fallback-card p').textContent='Bạn đang dùng chế độ đọc nhẹ. Khám phá đủ 18 hồ sơ, xem ảnh và ghi chú mà không cần tải không gian 3D.';
+  document.querySelectorAll('#zoom-in,#zoom-out,#turn-left,#turn-right,#quality').forEach(b=>b.disabled=true);
+  if(!reading)console.warn('Museum reading fallback:',reason);
 }
