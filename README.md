@@ -20,7 +20,16 @@ Trong thư mục dự án: `python -m http.server 5174`, mở http://localhost:5
 
 Giữ workflow `.github/workflows/static.yml`. Repository → Settings → Pages → Source: **GitHub Actions**. Push nhánh `main` sẽ tự deploy. Kiểm tra Actions có dấu xanh, sau đó mở https://brendanlawson.github.io/hcm202/ . Nếu thấy bản cũ, tải lại mạnh Ctrl+Shift+R. Không cần tạo deployment mới mỗi lần.
 
-Vercel cũng hỗ trợ: Framework Other, không Build Command, Output Directory `.`.
+Chỉ triển khai GitHub Pages; không cần Vercel hoặc dịch vụ 3D bên thứ ba.
+
+## Thao tác 3D
+
+- Bấm **Hướng dẫn 3D** dưới phòng để thực hành 4 bước ngay trong không gian. Có thể đóng bất kỳ lúc nào; không tự chạy camera liên tục.
+- Chạm một khung ảnh để tiến đến trước khung; chạm lại, dấu **+** hoặc **Đọc hồ sơ** để đọc. Viền vàng đánh dấu khung đang chọn.
+- **‹ / ›** chuyển qua ba khung trong cánh hiện tại. Bấm tên khung để đặt lại góc gần; chọn lại chương để xem cả cánh; **Toàn cảnh** về sảnh.
+- Kéo / cuộn / pinch hoặc dùng nút xoay, zoom. Khi focus trong canvas: **← / →**, **+ / −**, **[ / ]**, **Enter**, **Home**. Nút bấm là phương án thay thế cho cử chỉ.
+- Giới hạn góc không bị nới sau mỗi lần kéo; thao tác nhiều ngón không mở nhầm hồ sơ. Camera ngừng nhận thao tác khi cửa sổ đọc mở. Zoom và xoay có thể ngắt chuyển góc; khung tự căn lại khi kích thước màn hình thay đổi.
+- Hướng dẫn là hướng dẫn thao tác do nhóm viết, không phải tư liệu lịch sử. Không thêm game, chatbot hoặc nội dung kiến thức mới trong đợt chỉnh 3D này.
 
 ## Nguồn và phạm vi
 
@@ -36,6 +45,6 @@ Renderer theo nhu cầu: dừng khi đứng yên hoặc tab ẩn, không đo lay
 
 ## Kiểm tra
 
-`node tests/content.test.mjs` kiểm tra 18 hồ sơ, 10 ảnh/nguồn, 9 ảnh khác nhau trong phòng, file thư viện và font/giấy phép. Xem `QA.md` cho các kiểm tra trình duyệt. Không có benchmark FPS đa thiết bị.
+`node tests/content.test.mjs` kiểm tra 18 hồ sơ, 10 ảnh/nguồn, 9 ảnh khác nhau trong phòng, file thư viện và font/giấy phép; kiểm tra logic tap/drag/pinch/hủy cử chỉ. Xem `QA.md` cho các kiểm tra trình duyệt. Không có benchmark FPS đa thiết bị.
 
 Các file `exhibition.html`, `museum-2-5d.html`, `room.*` là bản thiết kế cũ, không dùng làm bản nội dung chính thức.

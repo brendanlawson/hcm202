@@ -29,6 +29,7 @@ try {
 } catch {}
 let storageWorks = true, zone = -1, world = null, activeExhibit = null, activeModal = '', autosave = null;
 let lastFocus = null, catalogueState = {filter: 0, query: ''};
+let focusedFrame=null, focusedIndex=0, guideStep=-1;
 const initial = new URL(location.href);
 function route(values) {
   const url = new URL(location.href);
@@ -54,6 +55,7 @@ function modal(title, kind, id) {
   if (!$('modal').open) lastFocus = document.activeElement;
   $('detail').replaceChildren(el('h2',title)); $('detail').firstChild.id = 'dialog-title';
   if (!$('modal').open) $('modal').showModal();
+  world?.suspend(true);
   $('modal').scrollTop = 0;
   route({view:kind, exhibit:id||null});
   // A stable close target is present even when replacing the entire modal body.
@@ -66,6 +68,7 @@ $('modal').addEventListener('click', e => { if (e.target === $('modal')) {
 }});
 $('modal').addEventListener('close', () => {
   flushNote(); activeModal = ''; route({view:null,exhibit:null}); $('detail').replaceChildren();
+  world?.suspend(false);
   if (lastFocus?.isConnected && lastFocus.getClientRects().length) lastFocus.focus({preventScroll:true});
   else $('catalogue').focus({preventScroll:true});
 });
@@ -162,18 +165,44 @@ function help() {
   modal('Tham quan theo cách của bạn','help');
   const steps=[['1. Chọn một chương','Ba nút phía dưới đưa bạn đến ba cánh trưng bày.'],['2. Khám phá không gian','Kéo để xoay, cuộn hoặc dùng hai ngón để zoom. Nút xoay và zoom là lựa chọn thay thế. Toàn cảnh đưa bạn về sảnh.'],['3. Đọc hồ sơ','Chạm dấu + hoặc chọn ảnh trong danh sách. Danh mục chứa đủ 18 hồ sơ, kể cả khi không dùng 3D.'],['4. Mang theo một giá trị','Ghi chú được tự lưu. Mở Sổ cá nhân để đọc lại và xuất TXT.'],['Máy yếu hoặc chuyển động gây khó chịu?','Bật Chế độ nhẹ. Trang tự tôn trọng thiết lập giảm chuyển động của thiết bị. Không có chuyển động tự chạy.']];
   steps.forEach(([h,p])=>$('detail').append(el('h3',h),el('p',p)));
+  $('detail').append(el('h3','Xem gần trong 3D'),el('p','Chạm trực tiếp một khung ảnh để camera tiến đến trước khung. Chạm lần nữa, dấu + hoặc Đọc hồ sơ để đọc. Dùng ‹ / › chuyển giữa ba khung trong cánh hiện tại; bấm vào tên khung để đặt lại góc nhìn gần. Chọn lại chương để xem cả cánh, hoặc Toàn cảnh để về sảnh.'),el('p','Khi bàn phím đang ở vùng 3D: ← / → xoay; + / − zoom; [ / ] đổi khung; Enter xem gần hoặc đọc khung đang chọn; Home đặt lại góc nhìn của cánh.'));
   const reading=el('a','Mở chế độ đọc, không tải 3D →');reading.href='museum-3d.html?mode=read';
-  const actions=el('div',undefined,'modal-actions');actions.append(reading,button('Nguồn tư liệu',sources));$('detail').append(actions);
+  const actions=el('div',undefined,'modal-actions');actions.append(reading,button('Nguồn tư liệu',sources));
+  if(world)actions.prepend(button('Thử hướng dẫn trong phòng →',()=>{$('modal').addEventListener('close',startGuide,{once:true});$('modal').close()},'primary'));
+  $('detail').append(actions);
 }
+function updateView(e,z,index) {
+  if(z>=0&&zone!==z)select(z,true,false);
+  focusedFrame=e;focusedIndex=index??0;
+  $('focus-frame').textContent=e?`${index+1}/3 · ${e.title}`:'Xem gần khung ảnh';
+  $('focus-frame').setAttribute('aria-label',e?'Đặt lại góc nhìn gần: '+e.title:'Xem gần khung ảnh đầu tiên');
+  $('frame-read').hidden=!e;
+  if(!e)$('status').textContent='Kéo để xoay · chạm khung ảnh để xem gần.';
+}
+const guideSteps=[
+  ['1/4 · Làm quen với sảnh','Kéo để xoay; cuộn hoặc dùng hai ngón để zoom. Các nút ↶ ↷ ＋ − bên dưới cũng làm được việc này.',()=>overview()],
+  ['2/4 · Chọn cánh trưng bày','Bạn đang ở Chương 5. Ba nút chương bên dưới luôn đưa bạn về góc nhìn của từng cánh.',()=>select(1)],
+  ['3/4 · Đứng trước một khung ảnh','Camera đã đưa bạn đến khung đầu. Kéo nhẹ để nhìn nghiêng, zoom để xem gần; bấm tên khung để đặt lại góc.',()=>world.focusFrame(0,1)],
+  ['4/4 · Tiếp tục và đọc','Dùng ‹ / › để đổi khung. Chọn Đọc hồ sơ hoặc dấu + để đọc. Toàn cảnh đưa bạn về sảnh bất cứ lúc nào.',()=>world.focusFrame(1,1)]
+];
+function showGuideStep(){const [title,copy,action]=guideSteps[guideStep];$('guide-title').textContent=title;$('guide-copy').textContent=copy;$('guide-next').textContent=guideStep===3?'Hoàn tất ✓':'Tiếp →';action()}
+function startGuide(){if(!world)return;guideStep=0;$('guide-panel').hidden=false;$('scene-guide').setAttribute('aria-expanded','true');showGuideStep();$('guide-next').focus({preventScroll:true})}
+function closeGuide(){guideStep=-1;$('guide-panel').hidden=true;$('scene-guide').setAttribute('aria-expanded','false');$('scene-guide').focus({preventScroll:true})}
+$('scene-guide').setAttribute('aria-controls','guide-panel');$('scene-guide').setAttribute('aria-expanded','false');$('scene-guide').onclick=()=>guideStep>=0?closeGuide():startGuide();
+$('guide-next').onclick=()=>{if(guideStep===3)closeGuide();else{guideStep++;showGuideStep()}};$('guide-close').onclick=closeGuide;
+document.addEventListener('keydown',e=>{if(e.key==='Escape'&&guideStep>=0&&!$('modal').open){e.preventDefault();closeGuide()}});
+$('frame-prev').onclick=()=>world?.nextFrame(-1);$('frame-next').onclick=()=>world?.nextFrame(1);
+$('focus-frame').onclick=()=>world?.focusFrame(focusedIndex);
+$('frame-read').onclick=()=>openExhibit(focusedFrame);
 function fillList(z) {
   $('art-list').replaceChildren();const list=z>=0?exhibits.filter(e=>e.zone===z):[exhibits[0],exhibits[6],exhibits[12]];
   list.forEach(e=>{const b=button('',()=>openExhibit(e),'exhibit-row');b.dataset.id=e.id;const img=photo(e.image,'',62,54);img.loading='lazy';const text=el('span');text.append(el('strong',e.title),el('small',`Chương ${e.chapter} · mục ${e.section}`));b.append(img,text);$('art-list').append(b)});progress();
   $('list-summary').replaceChildren(el('span',z>=0?'6 hồ sơ · chạm để mở':'Bắt đầu với 3 hồ sơ'),el('span','⌄'));
 }
-function select(z, updateURL=true) {
+function select(z, updateURL=true, moveCamera=true) {
   zone=z;const c=chapters[z];$('stage-title').textContent=c.title;$('chapter-label').textContent=`CHƯƠNG ${c.id} / ${c.short.toUpperCase()}`;$('title').textContent=c.short;$('description').textContent=c.intro;fillList(z);
   $('special').textContent=z===1?'Sơ đồ Đại đoàn kết →':'Danh mục Chương '+c.id+' →';$('special').onclick=z===1?unity:()=>catalogue(c.id);
-  document.querySelectorAll('[data-zone]').forEach(b=>b.setAttribute('aria-pressed',Number(b.dataset.zone)===z));world?.select(z);
+  document.querySelectorAll('[data-zone]').forEach(b=>b.setAttribute('aria-pressed',Number(b.dataset.zone)===z));if(moveCamera)world?.select(z);
   if(updateURL)route({chapter:c.id});
 }
 function overview() {
@@ -195,10 +224,12 @@ else if(requested==='unity')unity();else if(requested==='notebook')notebook();el
 // Lazy, locally hosted renderer: knowledge and notes remain usable without WebGL.
 if(initial.searchParams.get('mode')==='read')fallback('Chế độ đọc được chọn qua URL');
 else try {
-  const {createMuseum}=await import('./museum-scene.js');
+  const {createMuseum}=await import('./museum-scene.js?v=3d-guide-1');
   await document.fonts.ready;
-  world=createMuseum({host:$('scene'),labels:$('labels'),exhibits,open:openExhibit,light:saved.light,status:message=>$('status').textContent=message});
+  world=createMuseum({host:$('scene'),labels:$('labels'),exhibits,open:openExhibit,light:saved.light,status:message=>$('status').textContent=message,onView:updateView});
+  document.querySelectorAll('.frame-tools button').forEach(b=>b.disabled=false);
   if(zone>=0)world.select(zone);
+  if($('modal').open)world.suspend(true);
 } catch(e) { fallback(e.message); }
 function fallback(reason) {
   document.body.classList.add('fallback');document.querySelector('.fallback-card').hidden=false;

@@ -12,3 +12,19 @@
 @media(max-width:380px){.toolbar button{font-size:10px;padding:8px 6px}.toolbar #help{width:28px}.brand{font-size:21px}.stage-heading h1{font-size:20px}}
 .hotspot{width:44px;min-height:44px}
 @media(max-width:760px){summary{min-height:44px}.camera-controls button:not(:first-child){width:44px}}
+.frame-tools{display:flex;align-items:center;gap:6px;padding:8px 22px;border-top:1px solid var(--line);background:#fffdf7;flex:none;min-width:0}
+.frame-tools button{min-height:44px;font-size:11px;padding:8px 12px;flex:none}
+#frame-prev,#frame-next{width:44px;font-size:25px;padding:0}
+#focus-frame{flex:1;min-width:0;text-overflow:ellipsis;white-space:nowrap;overflow:hidden;text-align:left;font-weight:600}
+#scene-guide{margin-left:auto;background:#ede8d9}
+button:disabled{opacity:.45;cursor:wait}
+.hotspot.selected{background:#b99045;color:#fff;border-color:#fff2c9;box-shadow:0 0 0 4px #e2bb6450}
+#scene canvas.over-frame{cursor:pointer}#scene canvas.dragging{cursor:grabbing;user-select:none}
+.guide-panel{flex:none;background:#e8eee2;border-top:1px solid #c5d1bc;border-bottom:1px solid #c5d1bc;padding:12px 22px;display:flex;gap:16px;align-items:center;min-width:0}
+.guide-panel>div:first-child{flex:1;min-width:0}.guide-panel strong{font-size:13px}.guide-panel p{font-size:12px;color:#405640;line-height:1.6;margin:4px 0 0;text-wrap:pretty}
+.guide-actions{display:flex;gap:6px;flex:none}.guide-actions button{font-size:12px;min-height:44px}#guide-close{width:44px;padding:0}
+.fallback .frame-tools{display:none}button{touch-action:manipulation}
+@media(max-width:760px){.frame-tools{padding:6px 12px;gap:4px}.frame-tools button{font-size:10px;padding:6px 8px}#frame-prev,#frame-next{width:36px;font-size:24px}#scene-guide{max-width:80px;line-height:1.4}#frame-read{max-width:60px;white-space:normal;line-height:1.4}.guide-panel{padding:8px 12px;gap:8px;align-items:flex-start}.guide-panel strong{font-size:11px}.guide-panel p{font-size:10px;line-height:1.5}.guide-actions{flex-direction:column;gap:2px}.guide-actions button{font-size:10px;padding:4px 8px}#guide-close{min-height:30px;align-self:end;width:36px}.workspace{grid-template-rows:minmax(230px,1fr)auto}}
+@media(max-width:760px) and (max-height:650px){.workspace{overflow:auto;grid-template-rows:minmax(300px,1fr)auto}.stage-heading{padding:8px 12px}.stage-heading h1{font-size:18px}.scene-tag{display:none}.guide-panel p{font-size:10px}.workspace aside{max-height:none}}
+@media(max-width:760px){#frame-prev,#frame-next,#guide-close{width:44px;min-height:44px}}
+@media(max-width:760px) and (max-height:650px){.workspace{grid-template-rows:minmax(360px,1fr)auto}.workspace:has(#guide-panel:not([hidden])){grid-template-rows:minmax(480px,1fr)auto}.gallery{min-height:360px}.workspace aside{overflow:visible}}

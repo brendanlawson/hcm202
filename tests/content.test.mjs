@@ -2,6 +2,7 @@ import assert from 'node:assert/strict';
 import {existsSync, readFileSync} from 'node:fs';
 import {fileURLToPath} from 'node:url';
 import {chapters, exhibits, media, flow, flowNotes} from '../museum-content.js';
+import {createTapGesture} from '../museum-gestures.js';
 const root = new URL('../', import.meta.url);
 assert.equal(chapters.length, 3);
 assert.equal(exhibits.length, 18);
@@ -26,3 +27,11 @@ assert.ok(!html.includes('cdn.jsdelivr.net'),'primary page must not depend on a 
 const css=readFileSync(new URL('fonts.css',root),'utf8');
 for(const match of css.matchAll(/url\('([^']+)'\)/g))assert.ok(existsSync(new URL(match[1],root)),match[1]);
 console.log(`PASS: 3 chapters, 18 sourced records, 10 local images, 9 distinct room frames, local library/font licenses. (${fileURLToPath(root)})`);
+const gesture=createTapGesture(),point=(id,x=0,y=0)=>({pointerId:id,clientX:x,clientY:y});
+gesture.down(point(1));assert.equal(gesture.up(point(1,2,1)),true,'small tap is accepted');
+gesture.down(point(1));gesture.move(point(1,20));gesture.move(point(1));assert.equal(gesture.up(point(1)),false,'drag returning to origin is not a tap');
+gesture.down(point(1));assert.equal(gesture.up(point(1,10)),false,'up displacement counts even without move event');
+for(const release of [[1,2],[2,1]]){gesture.down(point(1));gesture.down(point(2));for(const id of release)assert.equal(gesture.up(point(id)),false,'pinch cannot open a file');assert.equal(gesture.active,false)}
+gesture.down(point(1));gesture.cancel(point(1));assert.equal(gesture.up(point(1)),false,'cancel rejects tap');
+gesture.down(point(3));assert.equal(gesture.up(point(3)),true,'new tap works after cancel');
+console.log('PASS: tap, drag-return, pointerup displacement, both pinch release orders, cancel/recovery.');
